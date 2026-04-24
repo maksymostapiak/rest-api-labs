@@ -19,5 +19,8 @@ class BookCreate(BookBase):
 
 class BookResponse(BookBase):
     id: uuid.UUID
-    
     model_config = ConfigDict(from_attributes=True)
+
+class BookCursorResponse(BaseModel):
+    items: List[BookResponse]
+    next_cursor: Optional[uuid.UUID] = Field(None, description="Курсор для отримання наступної сторінки")

@@ -5,25 +5,31 @@ from sqlalchemy.future import select
 from sqlalchemy import delete
 from models.book_db import BookDB
 
+from sqlalchemy import select, delete
+from models.book_db import BookDB
+
 class BookRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_all(self, limit: int, offset: int, status: str = None, author: str = None, sort_by: str = None) -> List[BookDB]:
+    async def get_all(
+        self, 
+        limit: int, 
+        cursor: Optional[uuid.UUID] = None, 
+        status: str = None, 
+        author: str = None
+    ) -> List[BookDB]:
         query = select(BookDB)
 
         if status:
             query = query.where(BookDB.status == status)
         if author:
-            query = query.where(BookDB.author.ilike(f"%{author}%")) 
+            query = query.where(BookDB.author.ilike(f"%{author}%"))
 
-        if sort_by == "title":
-            query = query.order_by(BookDB.title)
-        elif sort_by == "year":
-            query = query.order_by(BookDB.year)
+        if cursor:
+            query = query.where(BookDB.id > cursor)
 
-        query = query.limit(limit).offset(offset)
-
+        query = query.order_by(BookDB.id).limit(limit)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
