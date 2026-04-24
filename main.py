@@ -1,10 +1,14 @@
 from fastapi import FastAPI
 from api.books import router as books_router
+from models.database import engine, Base
+import contextlib
 
-app = FastAPI(title="Library API")
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(books_router)
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
