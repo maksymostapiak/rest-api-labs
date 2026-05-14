@@ -1,14 +1,26 @@
-from fastapi import FastAPI
-from api.books import router as books_router
-from models.database import engine, Base
-import contextlib
+from flask import Flask
+from flask_restful import Api
+from flasgger import Swagger
+from api.endpoints import BookListResource, BookResource
 
-@contextlib.asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
+def create_app():
+    app = Flask(__name__)
+    api = Api(app)
 
-app = FastAPI(lifespan=lifespan)
 
-app.include_router(books_router)
+    app.config['SWAGGER'] = {
+        'title': 'Library API (Layered Architecture)',
+        'uiversion': 3,
+        'description': 'API для управління книгами (Правильна архітектура)'
+    }
+    swagger = Swagger(app)
+
+
+    api.add_resource(BookListResource, '/api/books')
+    api.add_resource(BookResource, '/api/books/<int:book_id>')
+
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True)

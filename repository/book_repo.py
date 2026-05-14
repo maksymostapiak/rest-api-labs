@@ -1,50 +1,42 @@
-from typing import List, Optional
-import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import delete
-from models.book_db import BookDB
+from models.book_model import BookModel
 
-from sqlalchemy import select, delete
-from models.book_db import BookDB
+_books_db = [
+    BookModel(1, "1984", "George Orwell", 1949),
+    BookModel(2, "Кобзар", "Тарас Шевченко", 1840)
+]
 
 class BookRepository:
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    @staticmethod
+    def get_all():
+        return _books_db
 
-    async def get_all(
-        self, 
-        limit: int, 
-        cursor: Optional[uuid.UUID] = None, 
-        status: str = None, 
-        author: str = None
-    ) -> List[BookDB]:
-        query = select(BookDB)
+    @staticmethod
+    def get_by_id(book_id):
+        return next((b for b in _books_db if b.id == book_id), None)
 
-        if status:
-            query = query.where(BookDB.status == status)
-        if author:
-            query = query.where(BookDB.author.ilike(f"%{author}%"))
+    @staticmethod
+    def add(book: BookModel):
+        _books_db.append(book)
+        return book
 
-        if cursor:
-            query = query.where(BookDB.id > cursor)
+    @staticmethod
+    def update(book_id, data):
+        book = BookRepository.get_by_id(book_id)
+        if book:
+            if 'title' in data: book.title = data['title']
+            if 'author' in data: book.author = data['author']
+            if 'year' in data: book.year = data['year']
+        return book
 
-        query = query.order_by(BookDB.id).limit(limit)
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
+    @staticmethod
+    def delete(book_id):
+        global _books_db
+        book = BookRepository.get_by_id(book_id)
+        if book:
+            _books_db.remove(book)
+            return True
+        return False
 
-    async def get_by_id(self, book_id: uuid.UUID) -> Optional[BookDB]:
-        result = await self.db.execute(select(BookDB).where(BookDB.id == book_id))
-        return result.scalars().first()
-
-    async def add(self, book_data: dict) -> BookDB:
-        new_book = BookDB(**book_data)
-        self.db.add(new_book)
-        await self.db.commit()
-        await self.db.refresh(new_book)
-        return new_book
-
-    async def delete(self, book_id: uuid.UUID) -> bool:
-        result = await self.db.execute(delete(BookDB).where(BookDB.id == book_id))
-        await self.db.commit()
-        return result.rowcount > 0
+    @staticmethod
+    def get_next_id():
+        return max([b.id for b in _books_db]) + 1 if _books_db else 1

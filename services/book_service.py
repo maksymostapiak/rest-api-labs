@@ -1,42 +1,36 @@
-import uuid
-from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
-from schemas.book import BookCreate, BookResponse, BookStatus
 from repository.book_repo import BookRepository
-from schemas.book import BookCreate, BookResponse, BookCursorResponse
+from models.book_model import BookModel
+from schemas.book_schema import BookSchema
 
 class BookService:
-    def __init__(self, db: AsyncSession):
-        self.repo = BookRepository(db)
+    @staticmethod
+    def get_all_books():
+        books = BookRepository.get_all()
+        return BookSchema.serialize_list(books)
 
-    async def get_all_books(
-        self, 
-        limit: int,
-        cursor: Optional[uuid.UUID] = None,
-        status: Optional[BookStatus] = None, 
-        author: Optional[str] = None
-    ) -> BookCursorResponse:
+    @staticmethod
+    def get_book_by_id(book_id):
+        book = BookRepository.get_by_id(book_id)
+        return BookSchema.serialize(book)
+
+    @staticmethod
+    def create_book(data):
+
+        validation_errors = BookSchema.validate_create(data)
+        if validation_errors:
+            return None, validation_errors
+
+        new_id = BookRepository.get_next_id()
+        new_book = BookModel(new_id, data['title'], data['author'], data['year'])
         
-        status_value = status.value if status else None
-        books = await self.repo.get_all(limit, cursor, status_value, author)
-        
-        items = [BookResponse.model_validate(book) for book in books]
-        
-        # Визначаємо наступний курсор (id останнього елемента в списку)
-        next_cursor = items[-1].id if len(items) == limit else None
+        created_book = BookRepository.add(new_book)
+        return BookSchema.serialize(created_book), None
 
-        return BookCursorResponse(items=items, next_cursor=next_cursor)
+    @staticmethod
+    def update_book(book_id, data):
+        updated_book = BookRepository.update(book_id, data)
+        return BookSchema.serialize(updated_book)
 
-    async def get_book_by_id(self, book_id: uuid.UUID) -> Optional[BookResponse]:
-        book = await self.repo.get_by_id(book_id)
-        if book:
-            return BookResponse.model_validate(book)
-        return None
-
-    async def create_book(self, book_data: BookCreate) -> BookResponse:
-        book_dict = book_data.model_dump()
-        created_book = await self.repo.add(book_dict)
-        return BookResponse.model_validate(created_book)
-
-    async def delete_book(self, book_id: uuid.UUID) -> None:
-        await self.repo.delete(book_id)
+    @staticmethod
+    def delete_book(book_id):
+        return BookRepository.delete(book_id)
