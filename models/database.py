@@ -1,13 +1,13 @@
-import os
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import declarative_base
+import uuid
+from sqlalchemy import Column, String, Integer
+from sqlalchemy.dialects.postgresql import UUID
+from database import Base
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/library_db")
+class BookDB(Base):
+    __tablename__ = "books"
 
-engine = create_async_engine(DATABASE_URL, echo=True)
-async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-Base = declarative_base()
-
-async def get_db():
-    async with async_session() as session:
-        yield session
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String, nullable=False)
+    author = Column(String, nullable=False)
+    year = Column(Integer, nullable=False)
+    status = Column(String, default="available")
