@@ -2,8 +2,8 @@ from flask import request, jsonify
 from flask_restful import Resource
 import uuid
 
-from database import SessionLocal
-from book_service import BookService
+from models.database import SessionLocal
+from services.book_service import BookService
 
 class BookListResource(Resource):
     def get(self):

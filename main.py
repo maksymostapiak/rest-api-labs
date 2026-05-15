@@ -3,7 +3,7 @@ from flask_restful import Api
 from flasgger import Swagger
 
 from models.database import SessionLocal, engine, Base
-
+from api.books import BookListResource, BookResource
 from services.book_service import BookService
 
 Base.metadata.create_all(bind=engine)

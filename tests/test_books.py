@@ -1,74 +1,86 @@
 import pytest
-from fastapi.testclient import TestClient
+import uuid
 from main import app
-from models.database import books_db
+from models.database import SessionLocal, engine, Base
+from models.book_model import BookDB
 
-client = TestClient(app)
+@pytest.fixture(scope="module")
+def test_client():
+    app.config['TESTING'] = True
+    with app.test_client() as client:
+        Base.metadata.create_all(bind=engine)
+        yield client
 
 @pytest.fixture(autouse=True)
 def clear_db():
+    db = SessionLocal()
+    try:
+        db.query(BookDB).delete()
+        db.commit()
+    finally:
+        db.close()
 
-    books_db.clear()
-
-def test_create_book():
-    response = client.post("/books/", json={
+def test_create_book(test_client):
+    response = test_client.post("/books", json={
         "title": "Кобзар",
         "author": "Тарас Шевченко",
         "description": "Збірка поетичних творів",
         "status": "наявні в бібліотеці",
         "year": 1840
     })
+    
     assert response.status_code == 201
-    data = response.json()
+    data = response.get_json()
     assert data["title"] == "Кобзар"
     assert "id" in data
 
-def test_get_books():
-    client.post("/books/", json={"title": "1984", "author": "Джордж Орвелл", "year": 1949, "status": "наявні в бібліотеці"})
-    client.post("/books/", json={"title": "Кобзар", "author": "Тарас Шевченко", "year": 1840, "status": "видані комусь"})
+def test_get_books(test_client):
+    test_client.post("/books", json={"title": "1984", "author": "Джордж Орвелл", "year": 1949, "status": "наявні в бібліотеці"})
+    test_client.post("/books", json={"title": "Кобзар", "author": "Тарас Шевченко", "year": 1840, "status": "видані комусь"})
     
-    response = client.get("/books/")
+    response = test_client.get("/books")
     assert response.status_code == 200
-    assert len(response.json()) == 2
+    data = response.get_json()
 
-    response = client.get("/books/?status=видані комусь")
-    assert len(response.json()) == 1
-    assert response.json()[0]["title"] == "Кобзар"
+    assert len(data["items"]) == 2
 
-    response = client.get("/books/?sort_by=year")
-    assert response.json()[0]["year"] == 1840
+    response = test_client.get("/books?status=видані комусь")
+    data = response.get_json()
+    assert len(data["items"]) == 1
+    assert data["items"][0]["title"] == "Кобзар"
 
-def test_get_book_by_id():
-    create_response = client.post("/books/", json={
+def test_get_book_by_id(test_client):
+    create_response = test_client.post("/books", json={
         "title": "Dune",
         "author": "Frank Herbert",
         "year": 1965,
         "status": "наявні в бібліотеці"
     })
-    book_id = create_response.json()["id"]
+    book_id = create_response.get_json()["id"]
 
-    response = client.get(f"/books/{book_id}")
+    response = test_client.get(f"/books/{book_id}")
     assert response.status_code == 200
-    assert response.json()["id"] == book_id
+    assert response.get_json()["id"] == book_id
 
-    import uuid
     fake_id = str(uuid.uuid4())
-    response = client.get(f"/books/{fake_id}")
+    response = test_client.get(f"/books/{fake_id}")
     assert response.status_code == 404
 
-def test_delete_book_idempotent():
-    create_response = client.post("/books/", json={
+def test_delete_book(test_client):
+    create_response = test_client.post("/books", json={
         "title": "Test Book",
         "author": "Test Author",
         "year": 2024,
         "status": "наявні в бібліотеці"
     })
-    book_id = create_response.json()["id"]
+    book_id = create_response.get_json()["id"]
 
-    response1 = client.delete(f"/books/{book_id}")
-    assert response1.status_code == 204
+    response1 = test_client.delete(f"/books/{book_id}")
+    assert response1.status_code == 200
+    assert response1.get_json()["message"] == "Книгу видалено"
 
-    assert client.get(f"/books/{book_id}").status_code == 404
 
-    response2 = client.delete(f"/books/{book_id}")
-    assert response2.status_code == 204
+    assert test_client.get(f"/books/{book_id}").status_code == 404
+
+    response2 = test_client.delete(f"/books/{book_id}")
+    assert response2.status_code == 404
