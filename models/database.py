@@ -1,13 +1,16 @@
-import uuid
-from sqlalchemy import Column, String, Integer
-from sqlalchemy.dialects.postgresql import UUID
-from database import Base
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-class BookDB(Base):
-    __tablename__ = "books"
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/library_db")
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    title = Column(String, nullable=False)
-    author = Column(String, nullable=False)
-    year = Column(Integer, nullable=False)
-    status = Column(String, default="available")
+engine = create_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

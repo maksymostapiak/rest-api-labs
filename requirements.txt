@@ -1,6 +1,6 @@
-fastapi
-uvicorn
-pydantic
-pydantic-settings
-sqlalchemy
-asyncpg
+Flask==3.0.0
+Flask-RESTful==0.3.10
+flasgger==0.9.7.1
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.9
+pydantic==2.5.2

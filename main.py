@@ -1,26 +1,24 @@
 from flask import Flask
 from flask_restful import Api
 from flasgger import Swagger
-from api.endpoints import BookListResource, BookResource
 
-def create_app():
-    app = Flask(__name__)
-    api = Api(app)
+from models.database import SessionLocal, engine, Base
 
+from services.book_service import BookService
 
-    app.config['SWAGGER'] = {
-        'title': 'Library API (Layered Architecture)',
-        'uiversion': 3,
-        'description': 'API для управління книгами (Правильна архітектура)'
-    }
-    swagger = Swagger(app)
+Base.metadata.create_all(bind=engine)
 
+app = Flask(__name__)
+api = Api(app)
 
-    api.add_resource(BookListResource, '/api/books')
-    api.add_resource(BookResource, '/api/books/<int:book_id>')
+app.config['SWAGGER'] = {
+    'title': 'Library API',
+    'uiversion': 3
+}
+swagger = Swagger(app)
 
-    return app
+api.add_resource(BookListResource, '/books')
+api.add_resource(BookResource, '/books/<string:book_id>')
 
 if __name__ == '__main__':
-    app = create_app()
     app.run(debug=True)
