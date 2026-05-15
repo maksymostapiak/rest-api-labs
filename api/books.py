@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import Optional
 import uuid
 
-from schemas.book import BookCreate, BookResponse, BookStatus
+from schemas.book import BookCreate, BookResponse, BookStatus, BookCursorResponse
 from services.book_service import BookService
 from models.database import get_db
-from schemas.book import BookCreate, BookResponse, BookCursorResponse
+
+from security import get_current_user
 
 router = APIRouter(prefix="/books", tags=["Books"])
 
@@ -16,31 +17,38 @@ def get_book_service(db: AsyncSession = Depends(get_db)):
 @router.get("/", response_model=BookCursorResponse, status_code=status.HTTP_200_OK)
 async def get_books(
     limit: int = Query(10, ge=1, le=100),
-    cursor: Optional[uuid.UUID] = Query(None, description="ID останньої книги з попередньої сторінки"),
+    cursor: Optional[uuid.UUID] = Query(None, description="ID останньої книги"),
     status_filter: Optional[BookStatus] = Query(None, alias="status"),
     author: Optional[str] = None,
-    service: BookService = Depends(get_book_service)
+    service: BookService = Depends(get_book_service),
+    current_user: str = Depends(get_current_user)
 ):
-    return await service.get_all_books(
-        limit=limit, 
-        cursor=cursor, 
-        status=status_filter, 
-        author=author
-    )
+    return await service.get_all_books(limit=limit, cursor=cursor, status=status_filter, author=author)
 
 @router.get("/{book_id}", response_model=BookResponse, status_code=status.HTTP_200_OK)
-async def get_book(book_id: uuid.UUID, service: BookService = Depends(get_book_service)):
+async def get_book(
+    book_id: uuid.UUID, 
+    service: BookService = Depends(get_book_service),
+    current_user: str = Depends(get_current_user)
+):
     book = await service.get_book_by_id(book_id)
     if not book:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Книгу не знайдено")
     return book
 
 @router.post("/", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
-async def create_book(book: BookCreate, service: BookService = Depends(get_book_service)):
+async def create_book(
+    book: BookCreate, 
+    service: BookService = Depends(get_book_service),
+    current_user: str = Depends(get_current_user)
+):
     return await service.create_book(book)
 
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_book(book_id: uuid.UUID, service: BookService = Depends(get_book_service)):
-
+async def delete_book(
+    book_id: uuid.UUID, 
+    service: BookService = Depends(get_book_service),
+    current_user: str = Depends(get_current_user)
+):
     await service.delete_book(book_id)
     return
