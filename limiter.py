@@ -32,7 +32,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if username:
             self.user_records[username] = [t for t in self.user_records.get(username, []) if now - t < 60]
             
-            if len(self.user_records[username]) >= 10:
+            if len(self.user_records[username]) > 10:
                 return JSONResponse(
                     status_code=429, 
                     content={"detail": "Too Many Requests (Authorized limit: 10 per minute)"}
@@ -42,7 +42,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             ip = request.client.host
             self.ip_records[ip] = [t for t in self.ip_records.get(ip, []) if now - t < 60]
             
-            if len(self.ip_records[ip]) >= 2:
+            if len(self.ip_records[ip]) > 2:
                 return JSONResponse(
                     status_code=429, 
                     content={"detail": "Too Many Requests (Anonymous limit: 2 per minute)"}

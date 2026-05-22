@@ -3,6 +3,7 @@ from api.books import router as books_router
 from api.auth import router as auth_router
 from models.database import engine, Base
 import contextlib
+from limiter import RateLimitMiddleware
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
