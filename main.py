@@ -12,7 +12,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-app.add_middleware(RateLimitMiddleware)
+#app.add_middleware(RateLimitMiddleware)
 
 app.include_router(auth_router)
 app.include_router(books_router)
