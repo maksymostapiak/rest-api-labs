@@ -22,7 +22,6 @@ class BookService:
         
         items = [BookResponse.model_validate(book) for book in books]
         
-        # Визначаємо наступний курсор (id останнього елемента в списку)
         next_cursor = items[-1].id if len(items) == limit else None
 
         return BookCursorResponse(items=items, next_cursor=next_cursor)
