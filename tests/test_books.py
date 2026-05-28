@@ -7,21 +7,23 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from main import app
 from models.database import get_db
 
-
 TEST_MONGO_URL = "mongodb://admin:adminpassword@localhost:27017/"
-test_client = AsyncIOMotorClient(TEST_MONGO_URL)
-test_db = test_client.test_library_db
 
 async def override_get_db():
-    yield test_db
-
+    client = AsyncIOMotorClient(TEST_MONGO_URL)
+    try:
+        yield client.test_library_db
+    finally:
+        client.close()
 
 app.dependency_overrides[get_db] = override_get_db
 
 @pytest.fixture(scope="function", autouse=True)
 async def setup_db():
-
-    await test_db.books.delete_many({})
+    client = AsyncIOMotorClient(TEST_MONGO_URL)
+    db = client.test_library_db
+    await db.books.delete_many({})
+    client.close()
     yield
 
 @pytest.fixture
