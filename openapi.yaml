@@ -1,0 +1,168 @@
+openapi: 3.0.3
+info:
+  title: Library API Mock
+  description: Мок API для бібліотеки за допомогою Stoplight Prism
+  version: 1.0.0
+paths:
+  /books/:
+    get:
+      summary: Отримати список книг
+      tags:
+        - Books
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: cursor
+          in: query
+          description: ID останньої книги
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/BookStatus'
+        - name: author
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookCursorResponse'
+    post:
+      summary: Створити книгу
+      tags:
+        - Books
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCreate'
+      responses:
+        '201':
+          description: Книгу створено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponse'
+
+  /books/{book_id}:
+    get:
+      summary: Отримати книгу за ID
+      tags:
+        - Books
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Успішна відповідь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponse'
+        '404':
+          description: Книгу не знайдено
+          content:
+            application/json:
+              example:
+                detail: "Книгу не знайдено"
+    delete:
+      summary: Видалити книгу
+      tags:
+        - Books
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Успішно видалено (без контенту)
+
+components:
+  schemas:
+    BookStatus:
+      type: string
+      enum:
+        - "наявні в бібліотеці"
+        - "видані комусь"
+    BookCreate:
+      type: object
+      required:
+        - title
+        - author
+        - year
+      properties:
+        title:
+          type: string
+          example: "Кобзар"
+        author:
+          type: string
+          example: "Тарас Шевченко"
+        description:
+          type: string
+          nullable: true
+          example: "Збірка поетичних творів"
+        status:
+          $ref: '#/components/schemas/BookStatus'
+          default: "наявні в бібліотеці"
+        year:
+          type: integer
+          example: 1840
+    BookResponse:
+      type: object
+      required:
+        - id
+        - title
+        - author
+        - year
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          example: "Кобзар"
+        author:
+          type: string
+          example: "Тарас Шевченко"
+        description:
+          type: string
+          nullable: true
+          example: "Збірка поетичних творів"
+        status:
+          $ref: '#/components/schemas/BookStatus'
+        year:
+          type: integer
+          example: 1840
+    BookCursorResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookResponse'
+        next_cursor:
+          type: string
+          format: uuid
+          nullable: true
+          example: "550e8400-e29b-41d4-a716-446655440001"

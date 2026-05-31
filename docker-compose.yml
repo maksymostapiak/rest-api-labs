@@ -26,6 +26,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      
+  prism-mock:
+    image: stoplight/prism:5.14.3
+    container_name: prism-mock-api
+
+    command: mock -h 0.0.0.0 -p 4010 /api/openapi.yaml
+    ports:
+      - "4010:4010"
+    volumes:
+
+      - ./openapi.yaml:/api/openapi.yaml:ro
 
 volumes:
   postgres_data:
